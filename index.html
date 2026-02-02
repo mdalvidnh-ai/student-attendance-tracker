@@ -3,184 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT - Attendance Tracker</title>
+    <title>SAT Tracker Pro</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.png" type="image/png">
-    <meta name="theme-color" content="#2196F3">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <style>
         .active-tab { border-bottom: 4px solid #2196F3; color: #2196F3; font-weight: bold; }
-        .present-bg { background-color: #4CAF50 !important; color: white; transform: scale(1.05); }
-        .absent-bg { background-color: #FF5722 !important; color: white; transform: scale(1.05); }
-        .btn-transition { transition: all 0.2s ease; }
+        .present-bg { background-color: #4CAF50 !important; color: white; }
+        .absent-bg { background-color: #FF5722 !important; color: white; }
+        #toast { visibility: hidden; min-width: 200px; background: #333; color: #fff; text-align: center; border-radius: 30px; padding: 10px; position: fixed; z-index: 100; left: 50%; bottom: 100px; transform: translateX(-50%); font-size: 14px; }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 100px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 100px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
 </head>
-<body class="bg-gray-50 pb-24">
+<body class="bg-gray-100 pb-24">
 
-    <header class="bg-[#2196F3] text-white p-4 shadow-lg sticky top-0 z-10 flex flex-col gap-3">
-        <div class="flex items-center gap-3">
-            <img src="icon.png" alt="Logo" class="w-10 h-10 rounded-full border-2 border-white">
-            <h1 class="text-xl font-bold tracking-tight">SAT Tracker</h1>
+    <header class="bg-[#2196F3] text-white p-4 shadow-lg sticky top-0 z-10">
+        <div class="flex items-center gap-3 mb-3">
+            <img src="icon.png" class="w-8 h-8 rounded-full bg-white">
+            <h1 class="font-bold">SAT Attendance Pro</h1>
         </div>
-        <input type="date" id="datePicker" class="p-2 rounded text-black w-full border-none shadow-inner">
+        <input type="date" id="datePicker" class="p-2 rounded text-black w-full shadow-inner border-none">
     </header>
 
-    <main class="p-4 max-w-md mx-auto">
+    <main class="p-4 max-w-2xl mx-auto">
         <section id="home-sec" class="tab-content">
-            <div id="studentList" class="space-y-3">
-                <div class="text-center py-20">
-                    <p class="text-gray-400">No students found.</p>
-                    <p class="text-sm text-gray-400">Go to 'Upload' to import Excel.</p>
-                </div>
-            </div>
+            <div id="studentList" class="space-y-2"></div>
         </section>
 
         <section id="stats-sec" class="tab-content hidden">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Monthly Report</h2>
-            <div id="statsResult" class="space-y-4"></div>
+            <div class="bg-white p-4 rounded-xl shadow-sm mb-4">
+                <h3 class="font-bold text-gray-700 mb-2">Setup Monthly Holidays</h3>
+                <div class="flex gap-2">
+                    <input type="number" id="holidayCount" placeholder="Days" class="border p-2 rounded w-full" value="0">
+                    <button onclick="saveHolidays()" class="bg-orange-500 text-white px-4 py-2 rounded font-bold text-sm">Save</button>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1 italic">* Sundays & holidays for the selected month.</p>
+            </div>
+
+            <div id="statsSummary" class="space-y-4"></div>
         </section>
 
         <section id="upload-sec" class="tab-content hidden">
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
-                <div class="mb-4 text-[#FF5722] text-4xl">📊</div>
-                <h2 class="text-lg font-bold mb-2">Import Data</h2>
-                <p class="text-xs text-gray-500 mb-6 uppercase tracking-widest">Roll No | Name | Gender</p>
-                <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden">
-                <label for="excelInput" class="bg-[#2196F3] text-white px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-blue-600 block">
-                    Choose Excel File
-                </label>
+            <div class="bg-white p-8 rounded-2xl shadow text-center">
+                <input type="file" id="excelInput" class="hidden" accept=".xlsx, .xls">
+                <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold cursor-pointer inline-block">Upload Student Excel</label>
             </div>
         </section>
     </main>
 
-    <nav class="fixed bottom-0 w-full bg-white border-t flex justify-around p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center active-tab btn-transition">
-            <span class="text-[20px]">📅</span>
-            <span class="text-[10px] uppercase font-bold">Mark</span>
-        </button>
-        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center btn-transition">
-            <span class="text-[20px]">📈</span>
-            <span class="text-[10px] uppercase font-bold">Stats</span>
-        </button>
-        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center btn-transition">
-            <span class="text-[20px]">⚙️</span>
-            <span class="text-[10px] uppercase font-bold">Setup</span>
-        </button>
+    <div id="toast">Attendance marked successfully!</div>
+
+    <nav class="fixed bottom-0 w-full bg-white border-t flex justify-around py-3 shadow-2xl">
+        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center active-tab"><span>📅</span><span class="text-[10px]">MARK</span></button>
+        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center"><span>📈</span><span class="text-[10px]">REPORTS</span></button>
+        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center"><span>⚙️</span><span class="text-[10px]">SETUP</span></button>
     </nav>
 
     <script>
-        // DB Setup
-        const db = new Dexie("SAT_DB");
-        db.version(1).stores({
+        const db = new Dexie("SAT_PRO_DB");
+        db.version(2).stores({
             students: 'rollNo, name, gender',
-            attendance: '++id, [rollNo+date], date, status'
+            attendance: '++id, [rollNo+date], date, status',
+            settings: 'key' // To store holiday counts per month
         });
 
         const datePicker = document.getElementById('datePicker');
         datePicker.valueAsDate = new Date();
 
-        // Excel Logic
-        document.getElementById('excelInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json(sheet);
+        // Toast Message
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.innerText = msg;
+            t.className = "show";
+            setTimeout(() => t.className = "", 3000);
+        }
 
-            const students = json.map(row => ({
-                rollNo: String(row['Roll No'] || row['roll'] || ''),
-                name: row['Student Name'] || row['name'] || '',
-                gender: row['Gender'] || row['gender'] || 'Male'
-            })).filter(s => s.rollNo);
-
-            await db.students.bulkPut(students);
-            alert("Success! " + students.length + " students imported.");
-            showTab('home');
-        });
-
-        // UI Logic
+        // Attendance Logic
         async function loadAttendanceList() {
             const students = await db.students.toArray();
-            const selectedDate = datePicker.value;
+            const date = datePicker.value;
             const container = document.getElementById('studentList');
             container.innerHTML = '';
 
-            if(students.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-400 py-10">No data. Please upload Excel.</p>';
-                return;
-            }
-
             for (let s of students) {
-                const record = await db.attendance.get({rollNo: s.rollNo, date: selectedDate});
-                const status = record ? record.status : null;
-                
-                const card = document.createElement('div');
-                card.className = "flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border-l-4 " + 
-                                (s.gender.toLowerCase() === 'male' ? 'border-blue-400' : 'border-orange-400');
-                card.innerHTML = `
+                const rec = await db.attendance.get({rollNo: s.rollNo, date: date});
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border-l-4 mb-2 " + (s.gender === 'Male' ? 'border-blue-500' : 'border-pink-500');
+                div.innerHTML = `
                     <div>
                         <div class="font-bold text-gray-800">${s.name}</div>
-                        <div class="text-[10px] text-gray-400 uppercase font-bold">${s.rollNo} • ${s.gender}</div>
+                        <div class="text-[10px] text-gray-400">Roll: ${s.rollNo}</div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg font-bold border ${status === 'Present' ? 'present-bg' : 'bg-gray-50 text-gray-400'}">P</button>
-                        <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg font-bold border ${status === 'Absent' ? 'absent-bg' : 'bg-gray-50 text-gray-400'}">A</button>
-                    </div>
-                `;
-                container.appendChild(card);
+                        <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded border ${rec?.status === 'Present' ? 'present-bg' : 'bg-gray-50 text-gray-400'}">P</button>
+                        <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded border ${rec?.status === 'Absent' ? 'absent-bg' : 'bg-gray-100 text-gray-400'}">A</button>
+                    </div>`;
+                container.appendChild(div);
             }
         }
 
         async function mark(rollNo, status) {
-            const date = datePicker.value;
-            await db.attendance.put({rollNo, date, status});
+            await db.attendance.put({rollNo, date: datePicker.value, status});
+            showToast(`Marked ${rollNo} as ${status}`);
             loadAttendanceList();
         }
 
+        // Holiday Management
+        async function saveHolidays() {
+            const monthKey = datePicker.value.substring(0, 7);
+            const count = document.getElementById('holidayCount').value;
+            await db.settings.put({key: monthKey, value: parseInt(count)});
+            showToast("Holidays Updated!");
+            calculateStats();
+        }
+
+        // Advanced Statistics Engine
         async function calculateStats() {
-            const date = new Date(datePicker.value);
-            const monthStr = date.toISOString().substring(0, 7); // YYYY-MM
+            const monthStr = datePicker.value.substring(0, 7);
+            const [year, month] = monthStr.split('-').map(Number);
+            const totalDaysInMonth = new Date(year, month, 0).getDate();
             
+            const holidayData = await db.settings.get(monthStr);
+            const holidays = holidayData ? holidayData.value : 0;
+            const workingDays = totalDaysInMonth - holidays;
+            document.getElementById('holidayCount').value = holidays;
+
             const students = await db.students.toArray();
             const attendance = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
 
-            const boys = students.filter(s => s.gender.toLowerCase() === 'male');
-            const girls = students.filter(s => s.gender.toLowerCase() === 'female');
+            const boys = students.filter(s => s.gender === 'Male');
+            const girls = students.filter(s => s.gender === 'Female');
 
-            const getMetrics = (group) => {
+            const getStats = (group) => {
                 const rolls = group.map(s => s.rollNo);
                 const records = attendance.filter(a => rolls.includes(a.rollNo));
-                const present = records.filter(a => a.status === 'Present').length;
-                const absent = records.filter(a => a.status === 'Absent').length;
-                return { present, absent };
+                const presentCount = records.filter(a => a.status === 'Present').length;
+                const totalPossibleEntries = group.length * workingDays;
+                const percent = totalPossibleEntries > 0 ? ((presentCount / totalPossibleEntries) * 100).toFixed(1) : 0;
+                const avg = group.length > 0 ? (presentCount / (group.length * workingDays)).toFixed(2) : 0;
+                return { present: presentCount, percent, avg, total: group.length };
             };
 
-            const b = getMetrics(boys);
-            const g = getMetrics(girls);
+            const b = getStats(boys);
+            const g = getStats(girls);
+            const totalPresent = b.present + g.present;
+            const totalPossible = students.length * workingDays;
+            const totalPercent = totalPossible > 0 ? ((totalPresent / totalPossible) * 100).toFixed(1) : 0;
 
-            document.getElementById('statsResult').innerHTML = `
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                        <p class="text-xs font-bold text-blue-600 uppercase">Boys</p>
-                        <p class="text-2xl font-black text-blue-900">${b.present}</p>
-                        <p class="text-[10px] text-blue-400">Present this month</p>
-                    </div>
-                    <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-                        <p class="text-xs font-bold text-orange-600 uppercase">Girls</p>
-                        <p class="text-2xl font-black text-orange-900">${g.present}</p>
-                        <p class="text-[10px] text-orange-400">Present this month</p>
+            document.getElementById('statsSummary').innerHTML = `
+                <div class="bg-gray-800 text-white p-5 rounded-2xl shadow-lg">
+                    <p class="text-[10px] opacity-60 uppercase font-bold tracking-widest">Monthly Working Days: ${workingDays}</p>
+                    <div class="mt-2 flex justify-between items-end">
+                        <div>
+                            <p class="text-xs opacity-80">Combined Present %</p>
+                            <p class="text-4xl font-black text-blue-400">${totalPercent}%</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs opacity-80 font-bold">Total Present: ${totalPresent}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-gray-900 text-white p-5 rounded-2xl">
-                    <p class="text-xs opacity-60 uppercase font-bold">Total Combined Presence</p>
-                    <p class="text-3xl font-black">${b.present + g.present}</p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p class="font-bold text-blue-700 text-sm">BOYS REPORT</p>
+                        <div class="mt-2 space-y-1 text-xs">
+                            <p>Total Present: <b>${b.present}</b></p>
+                            <p>Present %: <b class="text-lg">${b.percent}%</b></p>
+                            <p>Avg Present: <b>${b.avg}</b></p>
+                        </div>
+                    </div>
+                    <div class="bg-pink-50 p-4 rounded-xl border border-pink-100">
+                        <p class="font-bold text-pink-700 text-sm">GIRLS REPORT</p>
+                        <div class="mt-2 space-y-1 text-xs">
+                            <p>Total Present: <b>${g.present}</b></p>
+                            <p>Present %: <b class="text-lg">${g.percent}%</b></p>
+                            <p>Avg Present: <b>${g.avg}</b></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <p class="font-bold text-gray-700 mb-2">Overall Monthly Summary</p>
+                    <div class="grid grid-cols-2 text-xs gap-y-2">
+                        <span class="text-gray-500">Total Students:</span> <span class="text-right font-bold">${students.length}</span>
+                        <span class="text-gray-500">Total Month Days:</span> <span class="text-right font-bold">${totalDaysInMonth}</span>
+                        <span class="text-gray-500">Holiday Adjustment:</span> <span class="text-right font-bold text-orange-600">-${holidays}</span>
+                        <div class="col-span-2 border-t mt-2 pt-2 flex justify-between font-bold text-blue-600">
+                            <span>COMBINED AVERAGE:</span> <span>${((parseFloat(b.avg) + parseFloat(g.avg))/2).toFixed(2)}</span>
+                        </div>
+                    </div>
                 </div>
             `;
         }
 
+        // Setup Logic
         function showTab(tab) {
             document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
@@ -190,7 +211,17 @@
             if(tab === 'home') loadAttendanceList();
         }
 
-        datePicker.addEventListener('change', loadAttendanceList);
+        document.getElementById('excelInput').onchange = async (e) => {
+            const data = await e.target.files[0].arrayBuffer();
+            const workbook = XLSX.read(data);
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            const students = json.map(r => ({ rollNo: String(r['Roll No'] || r['roll']), name: r['Student Name'] || r['name'], gender: r['Gender'] || 'Male' }));
+            await db.students.bulkPut(students);
+            showToast("Excel Data Imported!");
+            showTab('home');
+        };
+
+        datePicker.onchange = loadAttendanceList;
         loadAttendanceList();
     </script>
 </body>
