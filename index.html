@@ -3,83 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT Pro - Tracker</title>
+    <title>SAT Tracker - Full Pro</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <style>
-        .active-tab { color: #2196F3; border-bottom: 3px solid #2196F3; }
-        .present-btn { background-color: #4CAF50; color: white; border-color: #4CAF50; }
-        .absent-btn { background-color: #FF5722; color: white; border-color: #FF5722; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
-        #toast { visibility: hidden; background: #333; color: #fff; padding: 12px 24px; position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); border-radius: 50px; z-index: 1000; transition: 0.3s; }
-        #toast.show { visibility: visible; bottom: 100px; }
+        .active-tab { color: #2196F3; border-bottom: 4px solid #2196F3; }
+        .present-active { background-color: #4CAF50 !important; color: white; border-color: #4CAF50; }
+        .absent-active { background-color: #F44336 !important; color: white; border-color: #F44336; }
+        #toast { visibility: hidden; background: #333; color: white; padding: 12px 24px; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); border-radius: 50px; z-index: 1000; }
+        #toast.show { visibility: visible; }
     </style>
 </head>
-<body class="bg-gray-50 pb-24 font-sans">
+<body class="bg-gray-100 pb-24 font-sans">
 
-    <header class="bg-[#2196F3] text-white p-4 shadow-lg sticky top-0 z-50">
+    <header class="bg-[#2196F3] text-white p-4 sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center mb-3">
             <h1 class="text-xl font-black italic">SAT PRO</h1>
             <input type="date" id="datePicker" class="text-black p-1 rounded text-sm outline-none">
         </div>
-        <div class="relative">
-            <input type="text" id="studentSearch" placeholder="Search name or roll..." class="w-full p-2 pl-8 rounded-lg text-black text-sm" onkeyup="loadAttendanceList()">
-            <span class="absolute left-2 top-2 text-gray-400">🔍</span>
-        </div>
+        <input type="text" id="studentSearch" placeholder="Find student by name..." class="w-full p-2 rounded-lg text-black text-sm" oninput="loadAttendanceList()">
     </header>
 
-    <main class="p-4">
+    <main class="p-4 max-w-2xl mx-auto">
         <section id="home-sec" class="tab-content">
-            <div class="flex justify-between items-center mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                <span class="text-xs font-bold text-blue-700">DEFAULT: ALL PRESENT</span>
-                <button onclick="saveAllAsPresent()" class="text-xs bg-blue-600 text-white px-3 py-1 rounded shadow">Reset to Present</button>
+            <div class="bg-white p-3 mb-4 rounded-xl flex justify-between items-center shadow-sm">
+                <span class="text-[10px] font-bold text-gray-400">TAP 'A' TO MARK ABSENT</span>
+                <button onclick="saveAllPresent()" class="bg-green-600 text-white px-4 py-1 rounded-full text-[10px] font-bold">SET ALL TO P</button>
             </div>
             <div id="studentList" class="space-y-3"></div>
         </section>
 
         <section id="stats-sec" class="tab-content hidden">
-            <div class="bg-white p-4 rounded-xl shadow-sm mb-4">
-                <label class="text-xs font-bold text-gray-500">MONTHLY HOLIDAYS</label>
-                <div class="flex gap-2 mt-1">
-                    <input type="number" id="holidayCount" value="0" class="border p-2 rounded w-full">
-                    <button onclick="saveHolidays()" class="bg-black text-white px-4 rounded font-bold">SET</button>
+            <div class="bg-white p-4 rounded-2xl shadow-sm mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-[10px] font-black text-gray-400 uppercase">Holidays</label>
+                    <button onclick="exportToExcel()" class="bg-green-500 text-white px-3 py-1 rounded-lg text-[10px] font-bold">💾 DOWNLOAD EXCEL</button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" id="holidayCount" value="0" class="border-2 border-gray-100 p-2 rounded-xl w-full">
+                    <button onclick="saveHolidays()" class="bg-gray-900 text-white px-6 rounded-xl font-bold">SET</button>
                 </div>
             </div>
+
             <div id="statsSummary"></div>
-            <h3 class="font-bold text-gray-700 my-4">Date History (Click to check)</h3>
-            <div id="dateHistory" class="space-y-2"></div>
+
+            <div class="mt-6">
+                <h3 class="font-bold text-gray-800 mb-2">Absentee History</h3>
+                <div id="absenteeLog" class="space-y-2"></div>
+            </div>
         </section>
 
         <section id="upload-sec" class="tab-content hidden">
-            <div class="bg-white p-10 rounded-3xl shadow-xl text-center border-2 border-dashed border-blue-200">
+            <div class="bg-white p-12 rounded-3xl shadow text-center border-2 border-dashed border-gray-200">
                 <input type="file" id="excelInput" class="hidden" accept=".xlsx, .xls">
-                <label for="excelInput" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black cursor-pointer inline-block shadow-lg">IMPORT EXCEL</label>
-                <p class="text-xs text-gray-400 mt-4 uppercase">Roll No | Student Name | Gender</p>
+                <label for="excelInput" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold cursor-pointer inline-block">UPLOAD EXCEL</label>
             </div>
         </section>
     </main>
 
-    <div id="studentModal" class="modal">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 overflow-hidden flex flex-col max-h-[80vh]">
-            <div id="modalHeader" class="mb-4"></div>
-            <div id="modalRecords" class="flex-1 overflow-y-auto space-y-2 border-t pt-4"></div>
-            <button onclick="closeModal()" class="mt-6 w-full py-3 bg-gray-100 rounded-xl font-bold">CLOSE</button>
-        </div>
-    </div>
-
     <div id="toast">Saved!</div>
 
     <nav class="fixed bottom-0 w-full bg-white border-t flex justify-around py-3 shadow-2xl z-50">
-        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center active-tab"><span>📝</span><span class="text-[10px] font-bold">ATTENDANCE</span></button>
-        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center"><span>📊</span><span class="text-[10px] font-bold">REPORTS</span></button>
-        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center"><span>⚙️</span><span class="text-[10px] font-bold">SETUP</span></button>
+        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center active-tab"><span>📝</span><span class="text-[10px] font-bold">MARK</span></button>
+        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center"><span>📈</span><span class="text-[10px] font-bold">REPORTS</span></button>
+        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center"><span>⚙️</span><span class="text-[10px] font-bold">UPLOAD</span></button>
     </nav>
 
     <script>
-        const db = new Dexie("SAT_FINAL_DB");
+        const db = new Dexie("SAT_FINAL_V3");
         db.version(1).stores({
             students: 'rollNo, name, gender',
             attendance: '++id, [rollNo+date], date, status',
@@ -95,17 +89,6 @@
             setTimeout(() => t.classList.remove("show"), 2000);
         }
 
-        // Logic to make everyone present by default
-        async function saveAllAsPresent() {
-            const students = await db.students.toArray();
-            const date = datePicker.value;
-            for(let s of students) {
-                await db.attendance.put({ rollNo: s.rollNo, date: date, status: 'Present' });
-            }
-            showToast("All marked Present!");
-            loadAttendanceList();
-        }
-
         async function loadAttendanceList() {
             const students = await db.students.toArray();
             const date = datePicker.value;
@@ -113,23 +96,23 @@
             const container = document.getElementById('studentList');
             container.innerHTML = '';
 
-            const filtered = students.filter(s => s.name.toLowerCase().includes(search) || s.rollNo.includes(search));
+            const filtered = students.filter(s => s.name.toLowerCase().includes(search));
 
             for (let s of filtered) {
                 const rec = await db.attendance.get({rollNo: s.rollNo, date: date});
-                // If no record exists, visually it shows as 'Present' (default) but not saved yet
-                const status = rec ? rec.status : 'Present'; 
-                
+                const status = rec ? rec.status : 'Present';
+
                 const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border-l-8 " + (s.gender === 'Male' ? 'border-blue-400' : 'border-pink-400');
+                div.className = "flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border-l-8 " + 
+                                (s.gender === 'Male' ? 'border-blue-500' : 'border-pink-500');
                 div.innerHTML = `
-                    <div onclick="viewIndividual('${s.rollNo}')" class="flex-1 cursor-pointer">
-                        <div class="font-black text-gray-800 uppercase tracking-tight">${s.name}</div>
-                        <div class="text-[10px] text-gray-400 font-bold">ROLL: ${s.rollNo} • ${s.gender}</div>
+                    <div>
+                        <div class="font-bold text-gray-800 uppercase text-sm">${s.name}</div>
+                        <div class="text-[10px] text-gray-400 font-bold">ROLL: ${s.rollNo}</div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="mark('${s.rollNo}', 'Present')" class="px-4 py-2 rounded-xl text-xs font-black border-2 ${status === 'Present' ? 'present-btn' : 'bg-gray-50 text-gray-300'}">P</button>
-                        <button onclick="mark('${s.rollNo}', 'Absent')" class="px-4 py-2 rounded-xl text-xs font-black border-2 ${status === 'Absent' ? 'absent-btn' : 'bg-gray-50 text-gray-300'}">A</button>
+                        <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg font-bold border-2 ${status === 'Present' ? 'present-active' : 'bg-gray-50 text-gray-300'}">P</button>
+                        <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg font-bold border-2 ${status === 'Absent' ? 'absent-active' : 'bg-gray-50 text-gray-300'}">A</button>
                     </div>`;
                 container.appendChild(div);
             }
@@ -137,27 +120,15 @@
 
         async function mark(rollNo, status) {
             await db.attendance.put({rollNo, date: datePicker.value, status});
-            showToast(`Roll ${rollNo} -> ${status}`);
+            showToast(`${status} saved`);
             loadAttendanceList();
         }
 
-        async function viewIndividual(rollNo) {
-            const student = await db.students.get(rollNo);
-            const records = await db.attendance.where('rollNo').equals(rollNo).reverse().toArray();
-            
-            document.getElementById('modalHeader').innerHTML = `
-                <h2 class="text-2xl font-black text-gray-900">${student.name}</h2>
-                <p class="text-sm font-bold text-blue-500 uppercase">Roll No: ${student.rollNo}</p>
-            `;
-            
-            document.getElementById('modalRecords').innerHTML = records.map(r => `
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                    <span class="text-sm font-bold text-gray-600">${r.date}</span>
-                    <span class="px-3 py-1 rounded-lg text-[10px] font-black ${r.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${r.status}</span>
-                </div>
-            `).join('') || '<p class="text-center text-gray-400 py-4">No records found.</p>';
-            
-            document.getElementById('studentModal').style.display = 'flex';
+        async function saveAllPresent() {
+            const students = await db.students.toArray();
+            for(let s of students) await db.attendance.put({ rollNo: s.rollNo, date: datePicker.value, status: 'Present' });
+            showToast("Marked All Present");
+            loadAttendanceList();
         }
 
         async function calculateStats() {
@@ -167,68 +138,74 @@
             
             const holData = await db.settings.get(monthStr);
             const holidays = holData ? holData.value : 0;
-            const daysInMonth = new Date(monthStr.split('-')[0], monthStr.split('-')[1], 0).getDate();
-            const workingDays = daysInMonth - holidays;
+            const workingDays = new Date(monthStr.split('-')[0], monthStr.split('-')[1], 0).getDate() - holidays;
 
-            const b = students.filter(s => s.gender === 'Male');
-            const g = students.filter(s => s.gender === 'Female');
-
-            const getRes = (group) => {
+            const gen = (gender) => {
+                const group = students.filter(s => s.gender === gender);
                 const rolls = group.map(s => s.rollNo);
-                const recs = attendance.filter(a => rolls.includes(a.rollNo));
-                const p = recs.filter(a => a.status === 'Present').length;
-                const totalPossible = group.length * workingDays;
+                const p = attendance.filter(a => rolls.includes(a.rollNo) && a.status === 'Present').length;
+                const totalOpp = group.length * workingDays;
                 return {
-                    p, 
-                    perc: totalPossible > 0 ? ((p / totalPossible) * 100).toFixed(1) : 0,
+                    perc: totalOpp > 0 ? ((p / totalOpp) * 100).toFixed(1) : 0,
                     avg: group.length > 0 ? (p / (group.length * workingDays)).toFixed(2) : 0
                 };
             };
 
-            const bStats = getRes(b);
-            const gStats = getRes(g);
+            const b = gen('Male');
+            const g = gen('Female');
 
             document.getElementById('statsSummary').innerHTML = `
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="bg-blue-600 text-white p-4 rounded-3xl shadow-lg">
-                        <p class="text-[10px] font-bold opacity-70">BOYS PRESENT %</p>
-                        <p class="text-3xl font-black">${bStats.perc}%</p>
-                        <p class="text-[10px] mt-2">Avg: ${bStats.avg}</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-blue-600 text-white p-4 rounded-3xl shadow">
+                        <p class="text-[10px] font-bold opacity-60 uppercase">Boys Present</p>
+                        <p class="text-3xl font-black">${b.perc}%</p>
+                        <p class="text-[10px]">Avg: ${b.avg}</p>
                     </div>
-                    <div class="bg-pink-500 text-white p-4 rounded-3xl shadow-lg">
-                        <p class="text-[10px] font-bold opacity-70">GIRLS PRESENT %</p>
-                        <p class="text-3xl font-black">${gStats.perc}%</p>
-                        <p class="text-[10px] mt-2">Avg: ${gStats.avg}</p>
+                    <div class="bg-pink-500 text-white p-4 rounded-3xl shadow">
+                        <p class="text-[10px] font-bold opacity-60 uppercase">Girls Present</p>
+                        <p class="text-3xl font-black">${g.perc}%</p>
+                        <p class="text-[10px]">Avg: ${g.avg}</p>
                     </div>
-                    <div class="col-span-2 bg-gray-900 text-white p-5 rounded-3xl text-center">
-                        <p class="text-xs font-bold opacity-50">COMBINED MONTHLY AVERAGE</p>
-                        <p class="text-4xl font-black text-green-400">${((parseFloat(bStats.avg) + parseFloat(gStats.avg))/2).toFixed(2)}</p>
-                    </div>
-                </div>
-            `;
-
-            // Day-wise History List
-            const days = [...new Set(attendance.map(a => a.date))].sort().reverse();
-            document.getElementById('dateHistory').innerHTML = days.map(d => {
-                const daily = attendance.filter(a => a.date === d);
-                const p = daily.filter(a => a.status === 'Present').length;
-                return `<div onclick="checkSpecificDate('${d}')" class="flex justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-100 cursor-pointer">
-                    <span class="font-bold text-gray-700">${d}</span>
-                    <span class="text-xs font-black text-blue-600 uppercase">Present: ${p}</span>
                 </div>`;
-            }).join('') || '<p class="text-center text-gray-400">No data for this month.</p>';
+
+            const days = [...new Set(attendance.map(a => a.date))].sort().reverse();
+            let logHtml = '';
+            for (let d of days) {
+                const absents = attendance.filter(a => a.date === d && a.status === 'Absent');
+                const names = absents.map(a => students.find(s => s.rollNo === a.rollNo)?.name || a.rollNo).join(', ');
+                logHtml += `
+                    <div class="bg-white p-3 rounded-xl border-l-4 border-red-500 shadow-sm">
+                        <div class="flex justify-between text-[11px] font-bold mb-1">
+                            <span>${d}</span><span class="text-red-600">${absents.length} ABSENT</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400">${names || 'Full Presence'}</p>
+                    </div>`;
+            }
+            document.getElementById('absenteeLog').innerHTML = logHtml || '<p class="text-center text-gray-400 py-4">No data.</p>';
         }
 
-        function checkSpecificDate(d) {
-            datePicker.value = d;
-            showTab('home');
+        async function exportToExcel() {
+            const students = await db.students.toArray();
+            const attendance = await db.attendance.toArray();
+            
+            const data = attendance.map(a => ({
+                Date: a.date,
+                RollNo: a.rollNo,
+                Name: students.find(s => s.rollNo === a.rollNo)?.name || 'Unknown',
+                Status: a.status
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Attendance_Report");
+            XLSX.writeFile(wb, `SAT_Report_${new Date().toLocaleDateString()}.xlsx`);
         }
 
         async function saveHolidays() {
             const m = datePicker.value.substring(0, 7);
             const v = document.getElementById('holidayCount').value;
             await db.settings.put({key: m, value: parseInt(v)});
-            showToast("Holidays Updated");
+            showToast("Holidays Saved");
             calculateStats();
         }
 
@@ -241,13 +218,11 @@
             if(t === 'home') loadAttendanceList();
         }
 
-        function closeModal() { document.getElementById('studentModal').style.display = 'none'; }
-
         document.getElementById('excelInput').onchange = async (e) => {
-            const data = await e.target.files[0].arrayBuffer();
-            const workbook = XLSX.read(data);
+            const d = await e.target.files[0].arrayBuffer();
+            const workbook = XLSX.read(d);
             const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            const students = json.map(r => ({ rollNo: String(r['Roll No'] || r['roll']), name: r['Student Name'] || r['name'], gender: r['Gender'] || 'Male' }));
+            const students = json.map(r => ({ rollNo: String(r['Roll No']), name: r['Student Name'], gender: r['Gender'] }));
             await db.students.bulkPut(students);
             showToast("Imported!");
             showTab('home');
