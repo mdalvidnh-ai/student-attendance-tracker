@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT - Attendance Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.png" type="image/png">
+    <meta name="theme-color" content="#2196F3">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    <style>
+        .active-tab { border-bottom: 4px solid #2196F3; color: #2196F3; font-weight: bold; }
+        .present-bg { background-color: #4CAF50 !important; color: white; transform: scale(1.05); }
+        .absent-bg { background-color: #FF5722 !important; color: white; transform: scale(1.05); }
+        .btn-transition { transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 pb-24">
+
+    <header class="bg-[#2196F3] text-white p-4 shadow-lg sticky top-0 z-10 flex flex-col gap-3">
+        <div class="flex items-center gap-3">
+            <img src="icon.png" alt="Logo" class="w-10 h-10 rounded-full border-2 border-white">
+            <h1 class="text-xl font-bold tracking-tight">SAT Tracker</h1>
+        </div>
+        <input type="date" id="datePicker" class="p-2 rounded text-black w-full border-none shadow-inner">
+    </header>
+
+    <main class="p-4 max-w-md mx-auto">
+        <section id="home-sec" class="tab-content">
+            <div id="studentList" class="space-y-3">
+                <div class="text-center py-20">
+                    <p class="text-gray-400">No students found.</p>
+                    <p class="text-sm text-gray-400">Go to 'Upload' to import Excel.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="stats-sec" class="tab-content hidden">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Monthly Report</h2>
+            <div id="statsResult" class="space-y-4"></div>
+        </section>
+
+        <section id="upload-sec" class="tab-content hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <div class="mb-4 text-[#FF5722] text-4xl">📊</div>
+                <h2 class="text-lg font-bold mb-2">Import Data</h2>
+                <p class="text-xs text-gray-500 mb-6 uppercase tracking-widest">Roll No | Name | Gender</p>
+                <input type="file" id="excelInput" accept=".xlsx, .xls" class="hidden">
+                <label for="excelInput" class="bg-[#2196F3] text-white px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-blue-600 block">
+                    Choose Excel File
+                </label>
+            </div>
+        </section>
+    </main>
+
+    <nav class="fixed bottom-0 w-full bg-white border-t flex justify-around p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center active-tab btn-transition">
+            <span class="text-[20px]">📅</span>
+            <span class="text-[10px] uppercase font-bold">Mark</span>
+        </button>
+        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center btn-transition">
+            <span class="text-[20px]">📈</span>
+            <span class="text-[10px] uppercase font-bold">Stats</span>
+        </button>
+        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center btn-transition">
+            <span class="text-[20px]">⚙️</span>
+            <span class="text-[10px] uppercase font-bold">Setup</span>
+        </button>
+    </nav>
+
+    <script>
+        // DB Setup
+        const db = new Dexie("SAT_DB");
+        db.version(1).stores({
+            students: 'rollNo, name, gender',
+            attendance: '++id, [rollNo+date], date, status'
+        });
+
+        const datePicker = document.getElementById('datePicker');
+        datePicker.valueAsDate = new Date();
+
+        // Excel Logic
+        document.getElementById('excelInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet);
+
+            const students = json.map(row => ({
+                rollNo: String(row['Roll No'] || row['roll'] || ''),
+                name: row['Student Name'] || row['name'] || '',
+                gender: row['Gender'] || row['gender'] || 'Male'
+            })).filter(s => s.rollNo);
+
+            await db.students.bulkPut(students);
+            alert("Success! " + students.length + " students imported.");
+            showTab('home');
+        });
+
+        // UI Logic
+        async function loadAttendanceList() {
+            const students = await db.students.toArray();
+            const selectedDate = datePicker.value;
+            const container = document.getElementById('studentList');
+            container.innerHTML = '';
+
+            if(students.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-10">No data. Please upload Excel.</p>';
+                return;
+            }
+
+            for (let s of students) {
+                const record = await db.attendance.get({rollNo: s.rollNo, date: selectedDate});
+                const status = record ? record.status : null;
+                
+                const card = document.createElement('div');
+                card.className = "flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border-l-4 " + 
+                                (s.gender.toLowerCase() === 'male' ? 'border-blue-400' : 'border-orange-400');
+                card.innerHTML = `
+                    <div>
+                        <div class="font-bold text-gray-800">${s.name}</div>
+                        <div class="text-[10px] text-gray-400 uppercase font-bold">${s.rollNo} • ${s.gender}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg font-bold border ${status === 'Present' ? 'present-bg' : 'bg-gray-50 text-gray-400'}">P</button>
+                        <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg font-bold border ${status === 'Absent' ? 'absent-bg' : 'bg-gray-50 text-gray-400'}">A</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        async function mark(rollNo, status) {
+            const date = datePicker.value;
+            await db.attendance.put({rollNo, date, status});
+            loadAttendanceList();
+        }
+
+        async function calculateStats() {
+            const date = new Date(datePicker.value);
+            const monthStr = date.toISOString().substring(0, 7); // YYYY-MM
+            
+            const students = await db.students.toArray();
+            const attendance = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
+
+            const boys = students.filter(s => s.gender.toLowerCase() === 'male');
+            const girls = students.filter(s => s.gender.toLowerCase() === 'female');
+
+            const getMetrics = (group) => {
+                const rolls = group.map(s => s.rollNo);
+                const records = attendance.filter(a => rolls.includes(a.rollNo));
+                const present = records.filter(a => a.status === 'Present').length;
+                const absent = records.filter(a => a.status === 'Absent').length;
+                return { present, absent };
+            };
+
+            const b = getMetrics(boys);
+            const g = getMetrics(girls);
+
+            document.getElementById('statsResult').innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                        <p class="text-xs font-bold text-blue-600 uppercase">Boys</p>
+                        <p class="text-2xl font-black text-blue-900">${b.present}</p>
+                        <p class="text-[10px] text-blue-400">Present this month</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                        <p class="text-xs font-bold text-orange-600 uppercase">Girls</p>
+                        <p class="text-2xl font-black text-orange-900">${g.present}</p>
+                        <p class="text-[10px] text-orange-400">Present this month</p>
+                    </div>
+                </div>
+                <div class="bg-gray-900 text-white p-5 rounded-2xl">
+                    <p class="text-xs opacity-60 uppercase font-bold">Total Combined Presence</p>
+                    <p class="text-3xl font-black">${b.present + g.present}</p>
+                </div>
+            `;
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(tab + '-sec').classList.remove('hidden');
+            document.getElementById(tab + '-btn').classList.add('active-tab');
+            if(tab === 'stats') calculateStats();
+            if(tab === 'home') loadAttendanceList();
+        }
+
+        datePicker.addEventListener('change', loadAttendanceList);
+        loadAttendanceList();
+    </script>
+</body>
+</html>
