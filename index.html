@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT Tracker Pro v10.4</title>
+    <title>SAT Tracker Pro v10.7</title>
     <meta name="theme-color" content="#2196F3">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2232/2232688.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Base Dark Mode Settings */
         .dark { background-color: #0f172a; color: #f8fafc; }
         .dark .bg-white { background-color: #1e293b; color: #f8fafc; }
-        .dark .bg-slate-50 { background-color: #334155; }
+        .dark .bg-slate-50 { background-color: #334155; color: #ffffff; }
+        
+        /* Specific Fix: Student Name Visibility */
+        .student-name { color: #1e293b; transition: color 0.3s; }
+        .dark .student-name { color: #ffffff !important; }
+        
+        /* Attendance Buttons */
         .p-active { background-color: #22c55e !important; color: white; border-color: #16a34a; transform: scale(1.05); }
         .a-active { background-color: #ef4444 !important; color: white; border-color: #dc2626; transform: scale(1.05); }
+        
         .active-tab { color: white; border-bottom: 4px solid white; padding-bottom: 2px; }
         .version-tag { font-size: 7px; letter-spacing: 1px; opacity: 0.7; }
+        .count-badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 20px; font-size: 10px; }
         button { transition: all 0.1s ease-in-out; }
     </style>
 </head>
@@ -33,27 +40,26 @@
                 <h1 class="text-xl font-black italic uppercase flex items-center gap-2">
                     <i class="fas fa-graduation-cap"></i> SAT PRO
                 </h1>
-                <span class="version-tag font-bold uppercase">v10.4.0-PWA-READY</span>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="version-tag font-bold uppercase">v10.7.0-Contrast+</span>
+                    <span class="count-badge font-bold uppercase"><i class="fas fa-users mr-1"></i>Total: <span id="totalStudentsCount">0</span></span>
+                </div>
             </div>
             <div class="flex flex-col items-end gap-2">
                 <div class="flex gap-2">
-                    <button id="installBtn" class="hidden bg-yellow-400 text-blue-900 px-3 py-1 rounded-lg text-[10px] font-black animate-bounce">
-                        INSTALL APP
-                    </button>
-                    <button onclick="toggleDarkMode()" class="bg-white/20 p-2 rounded-full">
-                        <i id="themeIcon" class="fas fa-moon"></i>
-                    </button>
+                    <button id="installBtn" class="hidden bg-yellow-400 text-blue-900 px-3 py-1 rounded-lg text-[10px] font-black animate-bounce">INSTALL</button>
+                    <button onclick="toggleDarkMode()" class="bg-white/20 p-2 rounded-full"><i id="themeIcon" class="fas fa-moon"></i></button>
                 </div>
-                <input type="date" id="datePicker" class="text-black p-1 rounded-lg text-sm font-bold outline-none" onchange="loadList()">
+                <input type="date" id="datePicker" class="text-black p-1 rounded-lg text-sm font-bold outline-none border-2 border-white/20" onchange="loadList()">
             </div>
         </div>
         
         <div id="dailyDashboard" class="grid grid-cols-2 gap-2 text-[10px] font-bold text-center">
-            <div class="bg-blue-800/40 p-2 rounded-xl border border-white/10">
-                BOYS P: <span id="dayPB" class="text-green-300">0</span> | A: <span id="dayAB" class="text-red-300">0</span>
+            <div class="bg-blue-800/40 p-2 rounded-xl border border-white/10 uppercase">
+                Boys P: <span id="dayPB">0</span> | A: <span id="dayAB">0</span>
             </div>
-            <div class="bg-pink-800/40 p-2 rounded-xl border border-white/10">
-                GIRLS P: <span id="dayPG" class="text-green-300">0</span> | A: <span id="dayAG" class="text-red-300">0</span>
+            <div class="bg-pink-800/40 p-2 rounded-xl border border-white/10 uppercase">
+                Girls P: <span id="dayPG">0</span> | A: <span id="dayAG">0</span>
             </div>
         </div>
     </header>
@@ -67,15 +73,17 @@
             <div id="studentList" class="space-y-3"></div>
         </section>
 
-        <section id="stats-sec" class="tab-content hidden">
+        <section id="stats-sec" class="tab-content hidden space-y-4">
+            <div id="todayStatsContainer"></div>
             <div id="monthlyStatsContainer"></div>
-            <div class="mt-4 bg-white p-5 rounded-2xl shadow-sm border-l-8 border-orange-500">
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border-l-8 border-orange-500">
                 <button onclick="exportMonthlyReport()" class="w-full bg-green-600 text-white p-3 rounded-xl font-black mb-4 uppercase text-xs">
                     <i class="fas fa-file-excel mr-1"></i> Export Excel
                 </button>
                 <div class="flex items-center gap-3">
-                    <input type="number" id="holidayCount" value="0" placeholder="Holidays" class="flex-1 border-2 p-2 rounded-xl font-bold dark:bg-slate-700">
-                    <button onclick="saveHolidays()" class="bg-black text-white px-6 py-2 rounded-xl font-bold text-xs uppercase">Set</button>
+                    <input type="number" id="holidayCount" value="0" placeholder="Holidays" class="flex-1 border-2 p-2 rounded-xl font-bold dark:bg-slate-700 dark:border-slate-500">
+                    <button onclick="saveHolidays()" class="bg-black text-white px-6 py-2 rounded-xl font-bold text-xs uppercase">Set Holidays</button>
                 </div>
             </div>
         </section>
@@ -85,126 +93,63 @@
                 <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
                 <input type="file" id="excelInput" class="hidden" accept=".xlsx, .xls">
                 <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer inline-block">IMPORT DATA</label>
-                <button onclick="clearAllData()" class="block w-full mt-10 text-[9px] text-red-400 font-bold uppercase">Delete Data</button>
+                <button onclick="clearAllData()" class="block w-full mt-10 text-[9px] text-red-400 font-bold uppercase underline">Wipe Database</button>
             </div>
         </section>
     </main>
 
     <nav class="fixed bottom-0 w-full bg-[#2196F3] text-white flex justify-around py-3 shadow-2xl z-50">
-        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center">
-            <i class="fas fa-edit text-xl"></i><span class="text-[9px] font-bold uppercase">Mark</span>
-        </button>
-        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center">
-            <i class="fas fa-chart-pie text-xl"></i><span class="text-[9px] font-bold uppercase">Stats</span>
-        </button>
-        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center">
-            <i class="fas fa-cog text-xl"></i><span class="text-[9px] font-bold uppercase">Setup</span>
-        </button>
+        <button onclick="showTab('home')" id="home-btn" class="flex flex-col items-center"><i class="fas fa-edit text-xl"></i><span class="text-[9px] font-bold uppercase">Mark</span></button>
+        <button onclick="showTab('stats')" id="stats-btn" class="flex flex-col items-center"><i class="fas fa-chart-pie text-xl"></i><span class="text-[9px] font-bold uppercase">Stats</span></button>
+        <button onclick="showTab('upload')" id="upload-btn" class="flex flex-col items-center"><i class="fas fa-cog text-xl"></i><span class="text-[9px] font-bold uppercase">Setup</span></button>
     </nav>
 
     <script>
-        // --- PWA CONFIGURATION START ---
-        const manifest = {
-            "name": "SAT Tracker Pro",
-            "short_name": "SAT Pro",
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#2196F3",
-            "theme_color": "#2196F3",
-            "icons": [{
-                "src": "https://cdn-icons-png.flaticon.com/512/2232/2232688.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }]
-        };
-        const manifestStr = JSON.stringify(manifest);
-        const blob = new Blob([manifestStr], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = manifestURL;
-        document.head.appendChild(link);
+        // PWA Meta
+        const manifest = { "name": "SAT Tracker Pro", "short_name": "SAT Pro", "start_url": ".", "display": "standalone", "background_color": "#2196F3", "theme_color": "#2196F3", "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/2232/2232688.png","sizes": "512x512","type": "image/png"}]};
+        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(blob); document.head.appendChild(link);
 
         let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('installBtn').classList.remove('hidden');
-        });
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('installBtn').classList.remove('hidden'); });
+        document.getElementById('installBtn').onclick = async () => { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; document.getElementById('installBtn').classList.add('hidden'); } };
 
-        document.getElementById('installBtn').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.getElementById('installBtn').classList.add('hidden');
-                }
-                deferredPrompt = null;
-            }
-        });
-        // --- PWA CONFIGURATION END ---
-
-        const db = new Dexie("SAT_V10_4");
-        db.version(1).stores({
-            students: 'rollNo, name, gender',
-            attendance: '++id, [rollNo+date], date, status, remark',
-            settings: 'key'
-        });
+        const db = new Dexie("SAT_V10_7");
+        db.version(1).stores({ students: 'rollNo, name, gender', attendance: '++id, [rollNo+date], date, status, remark', settings: 'key' });
 
         const datePicker = document.getElementById('datePicker');
         datePicker.valueAsDate = new Date();
 
         window.onload = () => {
-            const lastTab = localStorage.getItem('activeTab') || 'home';
-            showTab(lastTab);
-            if (localStorage.getItem('theme') === 'dark') {
-                document.getElementById('bodyTag').classList.add('dark');
-                document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
-            }
+            showTab(localStorage.getItem('activeTab') || 'home');
+            if (localStorage.getItem('theme') === 'dark') { document.getElementById('bodyTag').classList.add('dark'); document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun'); }
         };
 
         function toggleDarkMode() {
             const body = document.getElementById('bodyTag');
-            const icon = document.getElementById('themeIcon');
             body.classList.toggle('dark');
             localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
-            icon.classList.toggle('fa-moon'); icon.classList.toggle('fa-sun');
+            document.getElementById('themeIcon').classList.toggle('fa-moon'); document.getElementById('themeIcon').classList.toggle('fa-sun');
         }
 
         async function loadList() {
             let students = await db.students.toArray();
+            document.getElementById('totalStudentsCount').innerText = students.length;
             students.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
-
             const date = datePicker.value;
             const search = document.getElementById('studentSearch').value.toLowerCase();
             const container = document.getElementById('studentList');
             container.innerHTML = '';
-            
             let counts = { pb: 0, ab: 0, pg: 0, ag: 0 };
-
             for (let s of students) {
                 const rec = await db.attendance.get({rollNo: s.rollNo, date: date});
                 const status = rec ? rec.status : null;
-                const remark = rec ? rec.remark || '' : '';
-
                 if (status === 'Present') { s.gender.toLowerCase().startsWith('m') ? counts.pb++ : counts.pg++; }
                 if (status === 'Absent') { s.gender.toLowerCase().startsWith('m') ? counts.ab++ : counts.ag++; }
-
                 if (s.name.toLowerCase().includes(search) || s.rollNo.toString().includes(search)) {
                     const card = document.createElement('div');
                     card.className = `bg-white p-4 rounded-2xl shadow-sm border-l-8 ${s.gender.toLowerCase().startsWith('m') ? 'border-blue-500' : 'border-pink-500'}`;
-                    card.innerHTML = `
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex-1">
-                                <div class="font-black text-slate-800 uppercase text-sm">${s.name}</div>
-                                <div class="text-[10px] text-slate-400 font-bold uppercase mt-1">Roll: ${s.rollNo}</div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button id="p-${s.rollNo}" onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button>
-                                <button id="a-${s.rollNo}" onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button>
-                            </div>
-                        </div>
-                        <input type="text" placeholder="Remark..." value="${remark}" onchange="updateRemark('${s.rollNo}', this.value)" class="w-full text-[10px] p-2 bg-slate-50 rounded-lg outline-none italic border border-transparent dark:text-black">`;
+                    card.innerHTML = `<div class="flex justify-between items-center mb-2"><div class="flex-1"><div class="student-name font-black uppercase text-sm">${s.name}</div><div class="text-[10px] text-slate-400 font-bold">Roll: ${s.rollNo}</div></div><div class="flex gap-2"><button id="p-${s.rollNo}" onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button><button id="a-${s.rollNo}" onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button></div></div><input type="text" placeholder="Remark..." value="${rec?.remark || ''}" onchange="updateRemark('${s.rollNo}', this.value)" class="w-full text-[10px] p-2 bg-slate-50 rounded-lg outline-none italic border border-transparent dark:text-black">`;
                     container.appendChild(card);
                 }
             }
@@ -212,34 +157,23 @@
         }
 
         async function mark(rollNo, status) {
-            const pBtn = document.getElementById(`p-${rollNo}`);
-            const aBtn = document.getElementById(`a-${rollNo}`);
-            if(status === 'Present') { pBtn.className = "w-10 h-10 rounded-lg border-2 font-black p-active"; aBtn.className = "w-10 h-10 rounded-lg border-2 font-black bg-slate-50 text-slate-300"; }
-            else { aBtn.className = "w-10 h-10 rounded-lg border-2 font-black a-active"; pBtn.className = "w-10 h-10 rounded-lg border-2 font-black bg-slate-50 text-slate-300"; }
-            
-            const existing = await db.attendance.get({rollNo, date: datePicker.value});
-            await db.attendance.put({rollNo, date: datePicker.value, status, remark: existing?.remark || ''});
+            const pBtn = document.getElementById(`p-${rollNo}`); const aBtn = document.getElementById(`a-${rollNo}`);
+            if(status === 'Present') { pBtn.className="w-10 h-10 rounded-lg border-2 font-black p-active"; aBtn.className="w-10 h-10 rounded-lg border-2 font-black bg-slate-50 text-slate-300"; }
+            else { aBtn.className="w-10 h-10 rounded-lg border-2 font-black a-active"; pBtn.className="w-10 h-10 rounded-lg border-2 font-black bg-slate-50 text-slate-300"; }
+            const rec = await db.attendance.get({rollNo, date: datePicker.value});
+            await db.attendance.put({rollNo, date: datePicker.value, status, remark: rec?.remark || ''});
             refreshCountersOnly();
         }
 
         async function refreshCountersOnly() {
             const students = await db.students.toArray();
-            const date = datePicker.value;
-            let counts = { pb: 0, ab: 0, pg: 0, ag: 0 };
-            const attendance = await db.attendance.where('date').equals(date).toArray();
+            const attendance = await db.attendance.where('date').equals(datePicker.value).toArray();
+            let c = { pb: 0, ab: 0, pg: 0, ag: 0 };
             attendance.forEach(a => {
-                const s = students.find(std => std.rollNo === a.rollNo);
-                if(s) {
-                    if(a.status === 'Present') s.gender.toLowerCase().startsWith('m') ? counts.pb++ : counts.pg++;
-                    else s.gender.toLowerCase().startsWith('m') ? counts.ab++ : counts.ag++;
-                }
+                const s = students.find(st => st.rollNo === a.rollNo);
+                if(s) { if(a.status === 'Present') s.gender.toLowerCase().startsWith('m')?c.pb++:c.pg++; else s.gender.toLowerCase().startsWith('m')?c.ab++:c.ag++; }
             });
-            updateHeader(counts);
-        }
-
-        async function updateRemark(rollNo, remark) {
-            const existing = await db.attendance.get({rollNo, date: datePicker.value});
-            await db.attendance.put({rollNo, date: datePicker.value, status: existing?.status || 'Present', remark});
+            updateHeader(c);
         }
 
         function updateHeader(c) {
@@ -247,37 +181,47 @@
             document.getElementById('dayPG').innerText = c.pg; document.getElementById('dayAG').innerText = c.ag;
         }
 
+        async function updateRemark(rollNo, remark) {
+            const existing = await db.attendance.get({rollNo, date: datePicker.value});
+            await db.attendance.put({rollNo, date: datePicker.value, status: existing?.status || 'Present', remark});
+        }
+
         async function calculateMonthly() {
             const monthStr = datePicker.value.substring(0, 7);
+            const dateToday = datePicker.value;
             const students = await db.students.toArray();
-            const attendance = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
+            const monthAtt = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
+            const todayAtt = monthAtt.filter(a => a.date === dateToday);
             const holData = await db.settings.get(monthStr);
             const workingDays = (new Date(monthStr.split('-')[0], monthStr.split('-')[1], 0).getDate()) - (holData ? holData.value : 0);
-
             const b = students.filter(s => s.gender.toLowerCase().startsWith('m'));
             const g = students.filter(s => s.gender.toLowerCase().startsWith('f'));
 
-            const getStats = (group) => {
+            const getStats = (group, attData, isMonthly) => {
                 const rolls = group.map(s => s.rollNo);
-                const recs = attendance.filter(a => rolls.includes(a.rollNo));
+                const recs = attData.filter(a => rolls.includes(a.rollNo));
                 const p = recs.filter(a => a.status === 'Present').length;
-                const totalOpp = group.length * workingDays;
+                const totalOpp = isMonthly ? (group.length * workingDays) : group.length;
                 return { p, ab: recs.filter(a => a.status === 'Absent').length, perc: totalOpp > 0 ? ((p / totalOpp) * 100).toFixed(1) : 0 };
             };
 
-            const mb = getStats(b); const mg = getStats(g);
-            document.getElementById('monthlyStatsContainer').innerHTML = `
-                <div class="bg-gray-900 text-white p-6 rounded-3xl shadow-xl border-b-8 border-blue-500">
-                    <p class="text-center text-[10px] font-black opacity-40 uppercase mb-4 tracking-tighter">Report for ${workingDays} Working Days</p>
+            const mb = getStats(b, monthAtt, true); const mg = getStats(g, monthAtt, true);
+            const tb = getStats(b, todayAtt, false); const tg = getStats(g, todayAtt, false);
+
+            document.getElementById('todayStatsContainer').innerHTML = `
+                <div class="bg-blue-600 text-white p-5 rounded-3xl shadow-lg">
+                    <p class="text-[10px] font-black opacity-60 uppercase mb-3 text-center">Snapshot: ${dateToday}</p>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-blue-500/10 p-4 rounded-2xl border border-white/5">
-                            <p class="text-blue-400 text-[10px] font-black uppercase mb-1">Boys</p>
-                            <p class="text-2xl font-black">${mb.perc}%</p>
-                        </div>
-                        <div class="bg-pink-500/10 p-4 rounded-2xl border border-white/5">
-                            <p class="text-pink-400 text-[10px] font-black uppercase mb-1">Girls</p>
-                            <p class="text-2xl font-black">${mg.perc}%</p>
-                        </div>
+                        <div class="text-center border-r border-white/20"><p class="text-[9px] uppercase font-bold">Today Boys</p><p class="text-2xl font-black">${tb.perc}%</p><p class="text-[8px] opacity-70">P:${tb.p} / A:${tb.ab}</p></div>
+                        <div class="text-center"><p class="text-[9px] uppercase font-bold">Today Girls</p><p class="text-2xl font-black">${tg.perc}%</p><p class="text-[8px] opacity-70">P:${tg.p} / A:${tg.ab}</p></div>
+                    </div>
+                </div>`;
+            document.getElementById('monthlyStatsContainer').innerHTML = `
+                <div class="bg-gray-900 text-white p-5 rounded-3xl shadow-xl border-b-8 border-blue-500">
+                    <p class="text-[10px] font-black opacity-40 uppercase mb-3 text-center">${monthStr} (${workingDays} Days)</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-500/10 p-3 rounded-2xl border border-white/5 text-center"><p class="text-blue-400 text-[10px] font-black uppercase">Monthly Boys</p><p class="text-2xl font-black">${mb.perc}%</p></div>
+                        <div class="bg-pink-500/10 p-3 rounded-2xl border border-white/5 text-center"><p class="text-pink-400 text-[10px] font-black uppercase">Monthly Girls</p><p class="text-2xl font-black">${mg.perc}%</p></div>
                     </div>
                 </div>`;
         }
@@ -296,25 +240,21 @@
             XLSX.writeFile(wb, `SAT_Report_${monthStr}.xlsx`);
         }
 
-        async function saveHolidays() {
-            await db.settings.put({key: datePicker.value.substring(0, 7), value: parseInt(document.getElementById('holidayCount').value) || 0});
-            calculateMonthly(); 
-        }
-
         function showTab(t) {
             localStorage.setItem('activeTab', t);
             document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => { b.classList.add('opacity-70'); b.classList.remove('active-tab'); });
             document.getElementById(t + '-sec').classList.remove('hidden');
-            document.getElementById(t + '-btn').classList.remove('opacity-70');
-            document.getElementById(t + '-btn').classList.add('active-tab');
-            if (t === 'home') loadList(); 
-            if (t === 'stats') calculateMonthly();
+            document.getElementById(t + '-btn').classList.remove('opacity-70'); document.getElementById(t + '-btn').classList.add('active-tab');
+            if (t === 'home') loadList(); if (t === 'stats') calculateMonthly();
         }
 
-        async function clearAllData() {
-            if(confirm("DANGER: This will delete everything!")) { await db.delete(); location.reload(); }
+        async function saveHolidays() {
+            await db.settings.put({key: datePicker.value.substring(0, 7), value: parseInt(document.getElementById('holidayCount').value) || 0});
+            calculateMonthly(); alert("Holidays Updated!");
         }
+
+        async function clearAllData() { if(confirm("DANGER: Wipe all data?")) { await db.delete(); location.reload(); } }
 
         document.getElementById('excelInput').onchange = async (e) => {
             const data = await e.target.files[0].arrayBuffer();
