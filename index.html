@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT Tracker Pro v10.8</title>
+    <title>SAT Tracker Pro v11.0</title>
     <meta name="theme-color" content="#2196F3">
-    <meta name="mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2232/2232688.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         .dark { background-color: #0f172a; color: #f8fafc; }
         .dark .bg-white { background-color: #1e293b; color: #f8fafc; }
@@ -21,9 +18,6 @@
         .p-active { background-color: #22c55e !important; color: white; border-color: #16a34a; transform: scale(1.05); }
         .a-active { background-color: #ef4444 !important; color: white; border-color: #dc2626; transform: scale(1.05); }
         .active-tab { color: white; border-bottom: 4px solid white; padding-bottom: 2px; }
-        .version-tag { font-size: 7px; letter-spacing: 1px; opacity: 0.7; }
-        .count-badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 20px; font-size: 10px; }
-        button { transition: all 0.1s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-100 pb-24 font-sans transition-colors duration-300" id="bodyTag">
@@ -31,29 +25,24 @@
     <header class="bg-[#2196F3] text-white p-4 sticky top-0 z-50 shadow-xl">
         <div class="flex justify-between items-start mb-4">
             <div>
-                <h1 class="text-xl font-black italic uppercase flex items-center gap-2">
-                    <i class="fas fa-graduation-cap"></i> SAT PRO
-                </h1>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="version-tag font-bold uppercase">v10.8.0-LogicFix</span>
-                    <span class="count-badge font-bold uppercase"><i class="fas fa-users mr-1"></i>Total: <span id="totalStudentsCount">0</span></span>
-                </div>
+                <h1 class="text-xl font-black italic uppercase"><i class="fas fa-graduation-cap"></i> SAT PRO</h1>
+                <p class="text-[9px] opacity-80 font-bold uppercase tracking-widest">v11.0 Stable</p>
             </div>
             <div class="flex flex-col items-end gap-2">
                 <div class="flex gap-2">
-                    <button id="installBtn" class="hidden bg-yellow-400 text-blue-900 px-3 py-1 rounded-lg text-[10px] font-black animate-bounce">INSTALL</button>
+                    <button onclick="resetToday()" class="bg-red-500 text-white px-2 py-1 rounded-md text-[9px] font-black border border-white/20 shadow-lg active:scale-95">RESET DAY</button>
                     <button onclick="toggleDarkMode()" class="bg-white/20 p-2 rounded-full"><i id="themeIcon" class="fas fa-moon"></i></button>
                 </div>
-                <input type="date" id="datePicker" class="text-black p-1 rounded-lg text-sm font-bold outline-none border-2 border-white/20" onchange="loadList()">
+                <input type="date" id="datePicker" class="text-black p-1 rounded-lg text-sm font-bold border-2 border-white/20" onchange="loadList()">
             </div>
         </div>
         
-        <div id="dailyDashboard" class="grid grid-cols-2 gap-2 text-[10px] font-bold text-center">
-            <div class="bg-blue-800/40 p-2 rounded-xl border border-white/10 uppercase">
-                Boys P: <span id="dayPB">0</span> | A: <span id="dayAB">0</span>
+        <div class="grid grid-cols-2 gap-2 text-[10px] font-bold text-center">
+            <div class="bg-blue-800/40 p-2 rounded-xl border border-white/10">
+                BOYS P: <span id="dayPB">0</span> | A: <span id="dayAB">0</span>
             </div>
-            <div class="bg-pink-800/40 p-2 rounded-xl border border-white/10 uppercase">
-                Girls P: <span id="dayPG">0</span> | A: <span id="dayAG">0</span>
+            <div class="bg-pink-800/40 p-2 rounded-xl border border-white/10">
+                GIRLS P: <span id="dayPG">0</span> | A: <span id="dayAG">0</span>
             </div>
         </div>
     </header>
@@ -62,7 +51,7 @@
         <section id="home-sec" class="tab-content">
             <div class="relative mb-4">
                 <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
-                <input type="text" id="studentSearch" placeholder="Search roll or name..." class="w-full p-4 pl-12 rounded-2xl shadow-inner border-none outline-none text-sm dark:bg-slate-800" oninput="loadList()">
+                <input type="text" id="studentSearch" placeholder="Search..." class="w-full p-4 pl-12 rounded-2xl shadow-inner outline-none dark:bg-slate-800" oninput="loadList()">
             </div>
             <div id="studentList" class="space-y-3"></div>
         </section>
@@ -70,20 +59,13 @@
         <section id="stats-sec" class="tab-content hidden space-y-4">
             <div id="todayStatsContainer"></div>
             <div id="monthlyStatsContainer"></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border-l-8 border-orange-500">
-                <button onclick="exportMonthlyReport()" class="w-full bg-green-600 text-white p-3 rounded-xl font-black mb-4 uppercase text-xs">EXPORT EXCEL</button>
-                <div class="flex items-center gap-3">
-                    <input type="number" id="holidayCount" value="0" class="flex-1 border-2 p-2 rounded-xl font-bold dark:bg-slate-700">
-                    <button onclick="saveHolidays()" class="bg-black text-white px-6 py-2 rounded-xl font-bold text-xs uppercase">Set Holidays</button>
-                </div>
-            </div>
         </section>
 
         <section id="upload-sec" class="tab-content hidden text-center">
             <div class="bg-white p-10 rounded-3xl border-2 border-dashed border-slate-200">
                 <input type="file" id="excelInput" class="hidden" accept=".xlsx, .xls">
-                <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer inline-block">IMPORT DATA</label>
-                <button onclick="clearAllData()" class="block w-full mt-10 text-[9px] text-red-400 font-bold uppercase underline">Wipe Database</button>
+                <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer inline-block uppercase shadow-lg">Import Excel</label>
+                <button onclick="clearAllData()" class="block w-full mt-10 text-[10px] text-red-400 font-bold uppercase underline">Clear All Data</button>
             </div>
         </section>
     </main>
@@ -95,32 +77,25 @@
     </nav>
 
     <script>
-        const db = new Dexie("SAT_V10_8");
-        db.version(1).stores({ students: 'rollNo, name, gender', attendance: '++id, [rollNo+date], date, status, remark', settings: 'key' });
+        const db = new Dexie("SAT_System_v11");
+        db.version(1).stores({ 
+            students: 'rollNo, name, gender', 
+            attendance: '++id, [rollNo+date], date, status' 
+        });
 
         const datePicker = document.getElementById('datePicker');
         datePicker.valueAsDate = new Date();
-
-        window.onload = () => {
-            showTab(localStorage.getItem('activeTab') || 'home');
-            if (localStorage.getItem('theme') === 'dark') { 
-                document.getElementById('bodyTag').classList.add('dark'); 
-                document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun'); 
-            }
-        };
 
         function toggleDarkMode() {
             const body = document.getElementById('bodyTag');
             body.classList.toggle('dark');
             localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
-            document.getElementById('themeIcon').classList.toggle('fa-moon'); document.getElementById('themeIcon').classList.toggle('fa-sun');
+            document.getElementById('themeIcon').className = body.classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
         }
 
         async function loadList() {
-            let students = await db.students.toArray();
-            document.getElementById('totalStudentsCount').innerText = students.length;
+            const students = await db.students.toArray();
             students.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
-            
             const date = datePicker.value;
             const search = document.getElementById('studentSearch').value.toLowerCase();
             const container = document.getElementById('studentList');
@@ -129,129 +104,75 @@
             for (let s of students) {
                 const rec = await db.attendance.get({rollNo: s.rollNo, date: date});
                 const status = rec ? rec.status : null;
+                
                 if (s.name.toLowerCase().includes(search) || s.rollNo.toString().includes(search)) {
                     const card = document.createElement('div');
                     card.className = `bg-white p-4 rounded-2xl shadow-sm border-l-8 ${s.gender.toLowerCase().startsWith('m') ? 'border-blue-500' : 'border-pink-500'}`;
-                    card.innerHTML = `<div class="flex justify-between items-center mb-2"><div class="flex-1"><div class="student-name font-black uppercase text-sm">${s.name}</div><div class="text-[10px] text-slate-400 font-bold">Roll: ${s.rollNo}</div></div><div class="flex gap-2"><button id="p-${s.rollNo}" onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button><button id="a-${s.rollNo}" onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button></div></div><input type="text" placeholder="Remark..." value="${rec?.remark || ''}" onchange="updateRemark('${s.rollNo}', this.value)" class="w-full text-[10px] p-2 bg-slate-50 rounded-lg outline-none italic border border-transparent dark:text-black">`;
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <div class="student-name font-black uppercase text-sm">${s.name}</div>
+                                <div class="text-[10px] text-slate-400 font-bold">Roll: ${s.rollNo}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button>
+                                <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button>
+                            </div>
+                        </div>`;
                     container.appendChild(card);
                 }
             }
-            refreshCountersOnly();
+            calculateDailyTally();
         }
 
         async function mark(rollNo, status) {
-            const rec = await db.attendance.get({rollNo, date: datePicker.value});
-            // If clicking the same button twice, do nothing to prevent logic loops
-            if(rec && rec.status === status) return;
-
-            await db.attendance.put({rollNo, date: datePicker.value, status, remark: rec?.remark || ''});
+            const date = datePicker.value;
+            const existing = await db.attendance.get({rollNo: rollNo, date: date});
             
-            // Visual feedback
-            const pBtn = document.getElementById(`p-${rollNo}`);
-            const aBtn = document.getElementById(`a-${rollNo}`);
-            if(status === 'Present') {
-                pBtn.classList.add('p-active'); pBtn.classList.remove('bg-slate-50', 'text-slate-300');
-                aBtn.classList.remove('a-active'); aBtn.classList.add('bg-slate-50', 'text-slate-300');
+            if (existing) {
+                if (existing.status === status) return; 
+                await db.attendance.update(existing.id, { status: status });
             } else {
-                aBtn.classList.add('a-active'); aBtn.classList.remove('bg-slate-50', 'text-slate-300');
-                pBtn.classList.remove('p-active'); pBtn.classList.add('bg-slate-50', 'text-slate-300');
+                await db.attendance.add({ rollNo: rollNo, date: date, status: status });
             }
-            refreshCountersOnly();
+            loadList(); 
         }
 
-        async function refreshCountersOnly() {
+        async function resetToday() {
+            if (confirm(`Clear all marks for ${datePicker.value}?`)) {
+                await db.attendance.where('date').equals(datePicker.value).delete();
+                loadList();
+            }
+        }
+
+        async function calculateDailyTally() {
+            const date = datePicker.value;
             const students = await db.students.toArray();
-            const attendance = await db.attendance.where('date').equals(datePicker.value).toArray();
+            const attendance = await db.attendance.where('date').equals(date).toArray();
             let c = { pb: 0, ab: 0, pg: 0, ag: 0 };
             
-            attendance.forEach(a => {
-                const s = students.find(st => st.rollNo === a.rollNo);
-                if(s) {
-                    const isMale = s.gender.toLowerCase().startsWith('m');
-                    if(a.status === 'Present') isMale ? c.pb++ : c.pg++;
-                    else if(a.status === 'Absent') isMale ? c.ab++ : c.ag++;
+            attendance.forEach(record => {
+                const student = students.find(s => s.rollNo === record.rollNo);
+                if (student) {
+                    const isMale = student.gender.toLowerCase().startsWith('m');
+                    if (record.status === 'Present') isMale ? c.pb++ : c.pg++;
+                    else if (record.status === 'Absent') isMale ? c.ab++ : c.ag++;
                 }
             });
             
-            document.getElementById('dayPB').innerText = c.pb; document.getElementById('dayAB').innerText = c.ab;
-            document.getElementById('dayPG').innerText = c.pg; document.getElementById('dayAG').innerText = c.ag;
-        }
-
-        async function updateRemark(rollNo, remark) {
-            const existing = await db.attendance.get({rollNo, date: datePicker.value});
-            await db.attendance.put({rollNo, date: datePicker.value, status: existing?.status || 'Present', remark});
-        }
-
-        async function calculateMonthly() {
-            const monthStr = datePicker.value.substring(0, 7);
-            const dateToday = datePicker.value;
-            const students = await db.students.toArray();
-            const monthAtt = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
-            const todayAtt = monthAtt.filter(a => a.date === dateToday);
-            const holData = await db.settings.get(monthStr);
-            const workingDays = (new Date(monthStr.split('-')[0], monthStr.split('-')[1], 0).getDate()) - (holData ? holData.value : 0);
-            
-            const b = students.filter(s => s.gender.toLowerCase().startsWith('m'));
-            const g = students.filter(s => s.gender.toLowerCase().startsWith('f'));
-
-            const getStats = (group, attData, isMonthly) => {
-                const rolls = group.map(s => s.rollNo);
-                const recs = attData.filter(a => rolls.includes(a.rollNo));
-                const p = recs.filter(a => a.status === 'Present').length;
-                const totalOpp = isMonthly ? (group.length * workingDays) : group.length;
-                return { p, ab: recs.filter(a => a.status === 'Absent').length, perc: totalOpp > 0 ? ((p / totalOpp) * 100).toFixed(1) : 0 };
-            };
-
-            const mb = getStats(b, monthAtt, true); const mg = getStats(g, monthAtt, true);
-            const tb = getStats(b, todayAtt, false); const tg = getStats(g, todayAtt, false);
-
-            document.getElementById('todayStatsContainer').innerHTML = `
-                <div class="bg-blue-600 text-white p-5 rounded-3xl shadow-lg">
-                    <p class="text-[10px] font-black opacity-60 uppercase mb-3 text-center">Today: ${dateToday}</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center border-r border-white/20"><p class="text-[9px] uppercase font-bold">Boys</p><p class="text-2xl font-black">${tb.perc}%</p></div>
-                        <div class="text-center"><p class="text-[9px] uppercase font-bold">Girls</p><p class="text-2xl font-black">${tg.perc}%</p></div>
-                    </div>
-                </div>`;
-            document.getElementById('monthlyStatsContainer').innerHTML = `
-                <div class="bg-gray-900 text-white p-5 rounded-3xl shadow-xl border-b-8 border-blue-500">
-                    <p class="text-[10px] font-black opacity-40 uppercase mb-3 text-center">${monthStr}</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center"><p class="text-blue-400 text-[10px] font-black uppercase">Boys</p><p class="text-2xl font-black">${mb.perc}%</p></div>
-                        <div class="text-center"><p class="text-pink-400 text-[10px] font-black uppercase">Girls</p><p class="text-2xl font-black">${mg.perc}%</p></div>
-                    </div>
-                </div>`;
-        }
-
-        async function exportMonthlyReport() {
-            const monthStr = datePicker.value.substring(0, 7);
-            const students = await db.students.toArray();
-            const attendance = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
-            const data = attendance.map(a => {
-                const s = students.find(st => st.rollNo === a.rollNo);
-                return { Date: a.date, Roll: a.rollNo, Name: s?.name || '?', Status: a.status, Remark: a.remark || '' };
-            });
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-            XLSX.writeFile(wb, `SAT_Report_${monthStr}.xlsx`);
+            document.getElementById('dayPB').innerText = c.pb;
+            document.getElementById('dayAB').innerText = c.ab;
+            document.getElementById('dayPG').innerText = c.pg;
+            document.getElementById('dayAG').innerText = c.ag;
         }
 
         function showTab(t) {
-            localStorage.setItem('activeTab', t);
             document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
-            document.querySelectorAll('nav button').forEach(b => { b.classList.add('opacity-70'); b.classList.remove('active-tab'); });
+            document.querySelectorAll('nav button').forEach(b => b.classList.add('opacity-70'));
             document.getElementById(t + '-sec').classList.remove('hidden');
-            document.getElementById(t + '-btn').classList.remove('opacity-70'); document.getElementById(t + '-btn').classList.add('active-tab');
-            if (t === 'home') loadList(); if (t === 'stats') calculateMonthly();
+            document.getElementById(t + '-btn').classList.remove('opacity-70');
+            if (t === 'home') loadList();
         }
-
-        async function saveHolidays() {
-            await db.settings.put({key: datePicker.value.substring(0, 7), value: parseInt(document.getElementById('holidayCount').value) || 0});
-            calculateMonthly(); alert("Updated!");
-        }
-
-        async function clearAllData() { if(confirm("Wipe all data?")) { await db.delete(); location.reload(); } }
 
         document.getElementById('excelInput').onchange = async (e) => {
             const data = await e.target.files[0].arrayBuffer();
@@ -261,7 +182,14 @@
                 return { rollNo: String(getV(['roll no', 'roll', 'id']) || Math.random()), name: getV(['student name', 'name', 'fullname']) || "UNKNOWN", gender: getV(['gender', 'sex']) || "Male" };
             });
             await db.students.clear(); await db.students.bulkPut(students);
-            alert("Success!"); showTab('home');
+            loadList();
+        };
+
+        async function clearAllData() { if(confirm("Wipe EVERYTHING?")) { await db.delete(); location.reload(); } }
+        
+        window.onload = () => {
+            if (localStorage.getItem('theme') === 'dark') toggleDarkMode();
+            loadList();
         };
     </script>
 </body>
