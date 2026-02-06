@@ -3,17 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAT Tracker Pro v11.2</title>
+    <title>SAT Tracker Pro v11.3</title>
     <meta name="theme-color" content="#2196F3">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .dark { background-color: #0f172a; color: #f8fafc; }
-        .dark .bg-white { background-color: #1e293b; color: #f8fafc; }
-        .student-name { color: #1e293b; transition: color 0.3s; }
+        /* CRITICAL DARK MODE FIXES */
+        .dark { background-color: #0f172a !important; color: #f8fafc; }
+        .dark .bg-white { background-color: #1e293b !important; color: #f8fafc; }
+        
+        /* High-priority Name Visibility */
+        .student-name { color: #1e293b; transition: color 0.3s; font-weight: 900; }
         .dark .student-name { color: #ffffff !important; }
+        
+        /* Remark Styling */
+        .remark-input { font-size: 10px; border: 1px solid transparent; transition: all 0.2s; }
+        .remark-input:focus { border-color: #2196F3; background: white; color: black; }
+        .dark .remark-input { background: rgba(255,255,255,0.05); color: #94a3b8; }
+        .dark .remark-input:focus { background: #334155; color: white; }
+
         .p-active { background-color: #22c55e !important; color: white; border-color: #16a34a; }
         .a-active { background-color: #ef4444 !important; color: white; border-color: #dc2626; }
         .active-tab { color: white; border-bottom: 4px solid white; }
@@ -24,11 +34,11 @@
     <header class="bg-[#2196F3] text-white p-4 sticky top-0 z-50 shadow-xl">
         <div class="flex justify-between items-start mb-4">
             <div>
-                <h1 class="text-xl font-black italic uppercase"><i class="fas fa-calculator"></i> SAT v11.2</h1>
+                <h1 class="text-xl font-black italic uppercase"><i class="fas fa-user-check"></i> SAT v11.3</h1>
             </div>
             <div class="flex flex-col items-end gap-2">
                 <div class="flex gap-2">
-                    <button onclick="resetToday()" class="bg-red-500 text-white px-2 py-1 rounded text-[9px] font-black">RESET</button>
+                    <button onclick="resetToday()" class="bg-red-500 text-white px-2 py-1 rounded text-[9px] font-black uppercase">Reset Day</button>
                     <button onclick="toggleDarkMode()" class="bg-white/20 p-2 rounded-full"><i id="themeIcon" class="fas fa-moon"></i></button>
                 </div>
                 <input type="date" id="datePicker" class="text-black p-1 rounded font-bold text-sm" onchange="loadList()">
@@ -43,38 +53,35 @@
 
     <main class="p-4 max-w-xl mx-auto">
         <section id="home-sec" class="tab-content">
-            <input type="text" id="studentSearch" placeholder="Search..." class="w-full p-4 mb-4 rounded-2xl shadow-inner outline-none dark:bg-slate-800" oninput="loadList()">
+            <input type="text" id="studentSearch" placeholder="Search name or roll..." class="w-full p-4 mb-4 rounded-2xl shadow-inner outline-none dark:bg-slate-800 dark:text-white" oninput="loadList()">
             <div id="studentList" class="space-y-3"></div>
         </section>
 
         <section id="stats-sec" class="tab-content hidden space-y-4">
             <div id="dailyDetailedReport"></div>
             
-            <div class="bg-white p-5 rounded-3xl shadow-lg border-t-8 border-orange-500 dark:bg-slate-800">
-                <h3 class="text-xs font-black uppercase mb-3">Holiday & Monthly Config</h3>
+            <div class="bg-white p-5 rounded-3xl shadow-lg dark:bg-slate-800">
+                <h3 class="text-xs font-black uppercase mb-3">Holiday Configuration</h3>
                 <div class="flex items-center gap-3">
-                    <div class="flex-1">
-                        <label class="text-[9px] font-bold opacity-60">MONTHLY HOLIDAYS</label>
-                        <input type="number" id="holidayInput" value="0" class="w-full p-2 border-2 rounded-xl font-black dark:text-black" onchange="generateReports()">
-                    </div>
-                    <button onclick="exportMonthlyReport()" class="bg-green-600 text-white px-4 py-3 rounded-xl font-black text-[10px] mt-4">EXCEL</button>
+                    <input type="number" id="holidayInput" value="0" placeholder="Holidays" class="flex-1 p-2 border rounded-xl font-black dark:bg-slate-700 dark:text-white" onchange="generateReports()">
+                    <button onclick="exportMonthlyReport()" class="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-[10px]">EXPORT EXCEL</button>
                 </div>
             </div>
 
             <div id="monthlyDetailedReport"></div>
 
             <div class="bg-white p-5 rounded-3xl shadow-lg dark:bg-slate-800">
-                <h3 class="text-xs font-black uppercase mb-3 text-blue-500">Share Report</h3>
-                <textarea id="shareBox" readonly class="w-full h-32 p-3 text-[10px] font-mono bg-slate-50 border rounded-xl mb-3 dark:text-black"></textarea>
+                <h3 class="text-xs font-black uppercase mb-3 text-blue-500">Copy Report Summary</h3>
+                <textarea id="shareBox" readonly class="w-full h-40 p-3 text-[10px] font-mono bg-slate-50 border rounded-xl mb-3 dark:bg-slate-900 dark:text-gray-300"></textarea>
                 <button onclick="copyReport()" class="w-full bg-blue-500 text-white p-3 rounded-xl font-black text-xs uppercase">Copy for WhatsApp</button>
             </div>
         </section>
 
         <section id="upload-sec" class="tab-content hidden text-center">
-            <div class="bg-white p-10 rounded-3xl border-2 border-dashed border-slate-200">
+            <div class="bg-white p-10 rounded-3xl border-2 border-dashed border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <input type="file" id="excelInput" class="hidden" accept=".xlsx, .xls">
-                <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer inline-block">IMPORT EXCEL</label>
-                <button onclick="clearAllData()" class="block w-full mt-10 text-[10px] text-red-400 font-bold uppercase underline">Clear All Data</button>
+                <label for="excelInput" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer inline-block uppercase tracking-widest shadow-lg">Import Student Data</label>
+                <button onclick="clearAllData()" class="block w-full mt-10 text-[10px] text-red-400 font-bold uppercase underline">Wipe Database</button>
             </div>
         </section>
     </main>
@@ -86,8 +93,11 @@
     </nav>
 
     <script>
-        const db = new Dexie("SAT_System_v11_2");
-        db.version(1).stores({ students: 'rollNo, name, gender', attendance: '++id, [rollNo+date], date, status' });
+        const db = new Dexie("SAT_System_v11_3");
+        db.version(1).stores({ 
+            students: 'rollNo, name, gender', 
+            attendance: '++id, [rollNo+date], date, status, remark' 
+        });
 
         const datePicker = document.getElementById('datePicker');
         datePicker.valueAsDate = new Date();
@@ -103,13 +113,27 @@
             for (let s of students) {
                 const rec = await db.attendance.get({rollNo: s.rollNo, date: date});
                 const status = rec ? rec.status : null;
+                const remark = rec ? rec.remark : '';
+
                 if (s.name.toLowerCase().includes(search) || s.rollNo.toString().includes(search)) {
                     const card = document.createElement('div');
                     card.className = `bg-white p-4 rounded-2xl shadow-sm border-l-8 ${s.gender.toLowerCase().startsWith('m') ? 'border-blue-500' : 'border-pink-500'} dark:bg-slate-800`;
-                    card.innerHTML = `<div class="flex justify-between items-center"><div class="flex-1"><div class="student-name font-black uppercase text-sm">${s.name}</div><div class="text-[10px] text-slate-400 font-bold">Roll: ${s.rollNo}</div></div><div class="flex gap-2">
-                        <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button>
-                        <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button>
-                    </div></div>`;
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex-1">
+                                <div class="student-name uppercase text-sm">${s.name}</div>
+                                <div class="text-[10px] text-slate-400 font-bold">Roll: ${s.rollNo}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="mark('${s.rollNo}', 'Present')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Present' ? 'p-active' : 'bg-slate-50 text-slate-300'}">P</button>
+                                <button onclick="mark('${s.rollNo}', 'Absent')" class="w-10 h-10 rounded-lg border-2 font-black ${status === 'Absent' ? 'a-active' : 'bg-slate-50 text-slate-300'}">A</button>
+                            </div>
+                        </div>
+                        <input type="text" placeholder="Add remark (e.g., Left at 11am)..." 
+                            value="${remark}" 
+                            onchange="updateRemark('${s.rollNo}', this.value)"
+                            class="remark-input w-full p-2 rounded-lg italic outline-none">
+                    `;
                     container.appendChild(card);
                 }
             }
@@ -120,12 +144,21 @@
             const date = datePicker.value;
             const existing = await db.attendance.get({rollNo: rollNo, date: date});
             if (existing) {
-                if (existing.status === status) return; 
                 await db.attendance.update(existing.id, { status: status });
             } else {
-                await db.attendance.add({ rollNo: rollNo, date: date, status: status });
+                await db.attendance.add({ rollNo: rollNo, date: date, status: status, remark: '' });
             }
             loadList(); 
+        }
+
+        async function updateRemark(rollNo, text) {
+            const date = datePicker.value;
+            const existing = await db.attendance.get({rollNo: rollNo, date: date});
+            if (existing) {
+                await db.attendance.update(existing.id, { remark: text });
+            } else {
+                await db.attendance.add({ rollNo: rollNo, date: date, status: 'Present', remark: text });
+            }
         }
 
         async function updateTally() {
@@ -151,12 +184,8 @@
             const dailyAtt = await db.attendance.where('date').equals(date).toArray();
             const monthlyAtt = await db.attendance.filter(a => a.date.startsWith(monthStr)).toArray();
             
-            // Holiday Logic
             const hols = parseInt(document.getElementById('holidayInput').value) || 0;
-            const year = parseInt(monthStr.split('-')[0]);
-            const month = parseInt(monthStr.split('-')[1]);
-            const totalDaysInMonth = new Date(year, month, 0).getDate();
-            const workingDays = totalDaysInMonth - hols;
+            const workingDays = new Date(date.substring(0,4), date.substring(5,7), 0).getDate() - hols;
 
             const calc = (attSet) => {
                 let d = { pb: 0, ab: 0, pg: 0, ag: 0 };
@@ -172,7 +201,6 @@
 
             const day = calc(dailyAtt);
             const mon = calc(monthlyAtt);
-            
             const bTotal = students.filter(s => s.gender.toLowerCase().startsWith('m')).length;
             const gTotal = students.filter(s => s.gender.toLowerCase().startsWith('f')).length;
 
@@ -180,39 +208,51 @@
             const gPerc = gTotal > 0 ? ((mon.pg / (gTotal * workingDays)) * 100).toFixed(1) : 0;
 
             document.getElementById('dailyDetailedReport').innerHTML = `
-                <div class="bg-white p-5 rounded-3xl shadow-lg dark:bg-slate-800 border-l-8 border-blue-500">
-                    <h3 class="text-xs font-black uppercase mb-3">Daily: ${date}</h3>
+                <div class="bg-blue-600 text-white p-5 rounded-3xl shadow-lg">
+                    <h3 class="text-xs font-black uppercase mb-4">Daily Report: ${date}</h3>
                     <div class="grid grid-cols-2 gap-4 text-center">
-                        <div class="bg-blue-50 p-3 rounded-2xl dark:bg-slate-700"><p class="text-[9px] font-bold opacity-60">BOYS P/A</p><p class="text-xl font-black text-blue-600">${day.pb}/${day.ab}</p></div>
-                        <div class="bg-pink-50 p-3 rounded-2xl dark:bg-slate-700"><p class="text-[9px] font-bold opacity-60">GIRLS P/A</p><p class="text-xl font-black text-pink-600">${day.pg}/${day.ag}</p></div>
-                    </div>
-                    <div class="mt-4 p-3 bg-slate-900 text-white rounded-2xl text-center">
-                        <p class="text-[9px] font-bold opacity-60 uppercase">Total Combined Present</p>
-                        <p class="text-3xl font-black">${day.pb + day.pg}</p>
+                        <div><p class="text-[9px] font-bold opacity-60">BOYS P/A</p><p class="text-2xl font-black">${day.pb} / ${day.ab}</p></div>
+                        <div><p class="text-[9px] font-bold opacity-60">GIRLS P/A</p><p class="text-2xl font-black">${day.pg} / ${day.ag}</p></div>
                     </div>
                 </div>`;
 
             document.getElementById('monthlyDetailedReport').innerHTML = `
-                <div class="bg-gray-900 text-white p-5 rounded-3xl shadow-lg">
-                    <h3 class="text-xs font-black uppercase mb-3 text-yellow-500">Monthly Avg (${workingDays} Working Days)</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center"><p class="text-[9px] opacity-60">BOYS AVG</p><p class="text-2xl font-black">${bPerc}%</p></div>
-                        <div class="text-center"><p class="text-[9px] opacity-60">GIRLS AVG</p><p class="text-2xl font-black">${gPerc}%</p></div>
+                <div class="bg-gray-900 text-white p-5 rounded-3xl shadow-lg border-b-8 border-blue-500">
+                    <p class="text-[10px] opacity-50 uppercase font-black mb-2">Monthly Average</p>
+                    <div class="flex justify-around">
+                        <div class="text-center"><p class="text-[9px] text-blue-400 font-bold uppercase">Boys</p><p class="text-2xl font-black">${bPerc}%</p></div>
+                        <div class="text-center"><p class="text-[9px] text-pink-400 font-bold uppercase">Girls</p><p class="text-2xl font-black">${gPerc}%</p></div>
                     </div>
                 </div>`;
 
-            document.getElementById('shareBox').value = `📅 REPORT: ${date}\n------------------\n👦 Boys: P-${day.pb} | A-${day.ab}\n👧 Girls: P-${day.pg} | A-${day.ag}\n✅ Total Present: ${day.pb+day.pg}\n❌ Total Absent: ${day.ab+day.ag}\n------------------\n📊 MONTHLY AVG (${monthStr})\nWorking Days: ${workingDays}\nBoy %: ${bPerc}%\nGirl %: ${gPerc}%`;
+            const remarksSummary = dailyAtt.filter(a => a.remark).map(a => {
+                const s = students.find(st => st.rollNo === a.rollNo);
+                return `• ${s?.name}: ${a.remark}`;
+            }).join('\n');
+
+            document.getElementById('shareBox').value = `📅 ATTENDANCE: ${date}\n------------------\n👦 Boys: P-${day.pb} | A-${day.ab}\n👧 Girls: P-${day.pg} | A-${day.ag}\n✅ Combined Present: ${day.pb+day.pg}\n❌ Combined Absent: ${day.ab+day.ag}\n\n📝 REMARKS:\n${remarksSummary || 'None'}\n\n📊 MONTHLY AVG:\nWorking Days: ${workingDays}\nBoy %: ${bPerc}%\nGirl %: ${gPerc}%`;
         }
 
-        async function resetToday() { if (confirm("Clear all marks for today?")) { await db.attendance.where('date').equals(datePicker.value).delete(); loadList(); } }
+        async function resetToday() { if (confirm("Wipe all data for today?")) { await db.attendance.where('date').equals(datePicker.value).delete(); loadList(); } }
+        
         function toggleDarkMode() { 
-            document.getElementById('bodyTag').classList.toggle('dark'); 
-            document.getElementById('themeIcon').className = document.getElementById('bodyTag').classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
+            const body = document.getElementById('bodyTag');
+            body.classList.toggle('dark'); 
+            localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = body.classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
         }
-        function copyReport() { document.getElementById('shareBox').select(); document.execCommand('copy'); alert("Report Copied!"); }
+
+        function copyReport() { 
+            const box = document.getElementById('shareBox');
+            box.select();
+            document.execCommand('copy');
+            alert("WhatsApp Summary Copied!");
+        }
+
         function showTab(t) {
             document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab', 'opacity-70'));
+            document.querySelectorAll('nav button').forEach(b => { if(b.id !== t+'-btn') b.classList.add('opacity-70'); });
             document.getElementById(t + '-sec').classList.remove('hidden');
             document.getElementById(t + '-btn').classList.add('active-tab');
             if (t === 'home') loadList(); if (t === 'stats') generateReports();
@@ -229,7 +269,15 @@
             loadList();
         };
 
-        window.onload = () => loadList();
+        async function clearAllData() { if(confirm("DANGER: This will delete ALL history. Proceed?")) { await db.delete(); location.reload(); } }
+        
+        window.onload = () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.getElementById('bodyTag').classList.add('dark');
+                document.getElementById('themeIcon').className = 'fas fa-sun';
+            }
+            loadList();
+        };
     </script>
 </body>
 </html>
